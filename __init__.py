@@ -1,7 +1,41 @@
 import dbconnect
 from datetime import datetime
 from . import exceptions
-from typing import Union, List
+from typing import Union, List, Type
+
+
+OPERATORS = {
+    "==": "=",
+    "<<": "<",
+    ">>": ">",
+    "<=": "<=",
+    ">=": ">="
+}
+
+
+def intersect(*args) -> list:
+    """
+    Creates a conjunction between multiple lists
+    :param args: Lists to join
+    :return: A ∪ B ∪ C ∪ ... ∪ Z
+    """
+    _list = list(args)
+    result = []
+    length = len(_list)
+
+    conjunction = list(set(_list[0]) & set(_list[1]))
+    _list.pop(1); _list.pop(0)
+    _list.insert(0, conjunction)
+    result.append(conjunction)
+
+    if length > 2:
+        while len(_list) > 1:
+            conjunction = list(set(_list[0]) & set(_list[1]))
+            _list.pop(1); _list.pop(0)
+            _list.insert(0, conjunction)
+            result.append(conjunction)
+
+    return result[0]
 
 
 def searches(table: list, attr: str, value: any) -> list:

@@ -65,6 +65,32 @@ def set_adapter(server: str, schema: str, verbose: bool) -> dbconnect.Adapter:
     return dbconnect.Adapter(server, schema, verbose)
 
 
+class ResponseObjectList:
+    def __init__(self, _list: list):
+        self.repertoire = _list
+        types = list({type(x) for x in _list})
+        if len(types) == 1:
+            self.type: Type[SQLObject] = types[0]
+        else:
+            raise ValueError("Objects in the lust must be of one type only")
+
+    def select(self, item):
+        """
+        Attemps to fetch an object with a primary key of the given value from the list.
+        :param item: Value of the primary key
+        :return: Object
+        """
+        return search(self.repertoire, self.type.PRIMARY_KEY, item)
+
+    def selectwhere(self, **kwargs):
+        selections = []
+        for k, v in kwargs.items():
+            results = set(searches(self.repertoire, k, v))
+            selections.append(results)
+        return intersect(*selections)
+
+
+
 class SQLObject:
     SERVER_NAME: str = ...
     SCHEMA_NAME: str = ...
@@ -74,14 +100,7 @@ class SQLObject:
     SQL_KEYS: List[str] = ...
     PRIMARY_KEY: str = ...
 
-    OPERATORS = {
-        "==": "=",
-        "<<": "<",
-        ">>": ">",
-        "<=": "<=",
-        ">=": ">="
-    }
-
+    OPERATORS = OPERATORS
 
     @classmethod
     def _db(cls) -> dbconnect.Adapter:
@@ -130,8 +149,8 @@ class SQLObject:
 
     @staticmethod
     def construct(response) -> list:
-        """TO BE OVERRIDEN: Takes in a SQL response and returns a list of objects"""
-        pass
+        """Takes in a SQL response and returns a list of objects"""
+        raise NotImplementedError
 
     @classmethod
     def gets(cls, **kwargs) -> List:

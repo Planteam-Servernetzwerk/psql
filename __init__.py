@@ -133,7 +133,11 @@ class SQLObject:
 
     @classmethod
     def get_next_id(cls):
-        result = cls.gets()[-1].primary_value() + 1
+        try:
+            data = cls.gets()[-1]
+        except IndexError:
+            return 0
+        result = data.primary_value() + 1
         try:
             return result
         except TypeError:

@@ -65,14 +65,18 @@ def set_adapter(server: str, schema: str, verbose: bool) -> dbconnect.Adapter:
     return dbconnect.Adapter(server, schema, verbose)
 
 
-class ResponseObjectList:
+class ResponseObjectList(list):
     def __init__(self, _list: list):
-        self.repertoire = _list
+        super().__init__(_list)
+        self.data = _list
         types = list({type(x) for x in _list})
         if len(types) == 1:
             self.type: Type[SQLObject] = types[0]
         else:
             raise ValueError("Objects in the lust must be of one type only")
+
+    def __getitem__(self, item):
+        return self.data[item]
 
     def select(self, item):
         """
@@ -80,15 +84,14 @@ class ResponseObjectList:
         :param item: Value of the primary key
         :return: Object
         """
-        return search(self.repertoire, self.type.PRIMARY_KEY, item)
+        return search(self.data, self.type.PRIMARY_KEY, item)
 
     def selectwhere(self, **kwargs):
         selections = []
         for k, v in kwargs.items():
-            results = set(searches(self.repertoire, k, v))
+            results = set(searches(self.data, k, v))
             selections.append(results)
         return intersect(*selections)
-
 
 
 class SQLObject:
@@ -153,14 +156,14 @@ class SQLObject:
         raise NotImplementedError
 
     @classmethod
-    def gets(cls, **kwargs) -> List:
+    def gets(cls, **kwargs) -> ResponseObjectList:
         """Retrieves a list of objects from the database."""
         if not kwargs:
-            return cls.construct(cls._retrieve())
+            return ResponseObjectList(cls.construct(cls._retrieve()))
         for k, v in kwargs.items():
             if str(v)[:2] not in cls.OPERATORS:
                 kwargs[k] = "==" + str(v)
-        return cls.construct(cls._retrieve(kwargs))
+        return ResponseObjectList(cls.construct(cls._retrieve(kwargs)))
 
     @classmethod
     def get(cls, **kwargs):

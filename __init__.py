@@ -72,8 +72,10 @@ class ResponseObjectList(list):
         types = list({type(x) for x in _list})
         if len(types) == 1:
             self.type: Type[SQLObject] = types[0]
+        elif len(types) == 0:
+            self.type = None
         else:
-            raise ValueError("Objects in the lust must be of one type only")
+            raise ValueError("Objects in the list must be of one type only")
 
     def __getitem__(self, item):
         return self.data[item]
@@ -84,9 +86,14 @@ class ResponseObjectList(list):
         :param item: Value of the primary key
         :return: Object
         """
+        if len(self.data) == 0:
+            raise IndexError("The list is empty")
         return search(self.data, self.type.PRIMARY_KEY, item)
 
     def selectwhere(self, **kwargs):
+        if len(self.data) == 0:
+            raise IndexError("The list is empty")
+
         selections = []
         for k, v in kwargs.items():
             results = set(searches(self.data, k, v))

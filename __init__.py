@@ -192,7 +192,7 @@ class SQLObject:
         try:
             data = cls.gets()[-1]
         except IndexError:
-            return 0
+            return 1
         result = data.primary_value() + 1
         try:
             return result

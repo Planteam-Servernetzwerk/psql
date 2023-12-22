@@ -127,7 +127,7 @@ class SQLObject:
         if constrictions:
             for k, v in constrictions.items():
                 operator = v[:2]
-                where += f"{k} {cls.OPERATORS[operator]} {v[2:]}, "
+                where += f"{k} {cls.OPERATORS[operator]} {v[2:]!r}, "
             where = where.strip(", ")
         return cls._db().query(f"SELECT * FROM {cls.TABLE_NAME} {where}".strip("WHERE "))
 

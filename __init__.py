@@ -23,6 +23,9 @@ def intersect(*args) -> list:
     result = []
     length = len(_list)
 
+    if length == 1:
+        return _list[0]
+
     conjunction = list(set(_list[0]) & set(_list[1]))
     _list.pop(1); _list.pop(0)
     _list.insert(0, conjunction)

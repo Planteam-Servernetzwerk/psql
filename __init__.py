@@ -164,7 +164,9 @@ class SQLObject:
         if not kwargs:
             return ResponseObjectList(cls.construct(cls._retrieve()))
         for k, v in kwargs.items():
-            if str(v)[:2] not in cls.OPERATORS:
+            if v is None:
+                kwargs[k] = "IS NULL"
+            elif str(v)[:2] not in cls.OPERATORS:
                 kwargs[k] = "==" + str(v)
         return ResponseObjectList(cls.construct(cls._retrieve(kwargs)))
 

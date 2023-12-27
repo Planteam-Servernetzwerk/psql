@@ -9,7 +9,8 @@ OPERATORS = {
     "<<": "<",
     ">>": ">",
     "<=": "<=",
-    ">=": ">="
+    ">=": ">=",
+    "IS": "IS NULL"
 }
 
 
@@ -126,8 +127,11 @@ class SQLObject:
         if constrictions:
             for k, v in constrictions.items():
                 operator = v[:2]
-                where += f"{k} {cls.OPERATORS[operator]} {v[2:]!r}, "
-            where = where.strip(", ")
+                if operator == "IS":
+                    where += f"{k} {cls.OPERATORS[operator]} AND "
+                else:
+                    where += f"{k} {cls.OPERATORS[operator]} {v[2:]!r} AND "
+            where = where.strip(" AND ")
         return cls._db().query(f"SELECT * FROM {cls.TABLE_NAME} {where}".strip("WHERE "))
 
     def primary_value(self):
@@ -171,7 +175,7 @@ class SQLObject:
             return ResponseObjectList(cls.construct(cls._retrieve()))
         for k, v in kwargs.items():
             if v is None:
-                kwargs[k] = "IS NULL"
+                kwargs[k] = "IS"
             elif str(v)[:2] not in cls.OPERATORS:
                 kwargs[k] = "==" + str(v)
         return ResponseObjectList(cls.construct(cls._retrieve(kwargs)))

@@ -81,7 +81,7 @@ class ResponseObjectList(list):
     def __getitem__(self, item):
         return self.data[item]
 
-    def select(self, item):
+    def select(self, item) -> list:
         """
         Attemps to fetch an object with a primary key of the given value from the list.
         :param item: Value of the primary key
@@ -89,12 +89,12 @@ class ResponseObjectList(list):
         """
         return search(self.data, self.type.PRIMARY_KEY, item)
 
-    def selectwhere(self, **kwargs):
+    def selectwhere(self, **kwargs) -> list:
         selections = []
         for k, v in kwargs.items():
             results = set(searches(self.data, k, v))
             selections.append(results)
-        return intersect(*selections)
+        return list(intersect(*selections))
 
 
 class SQLObject:

@@ -84,7 +84,7 @@ class ResponseObjectList(list):
     def __getitem__(self, item):
         return self.data[item]
 
-    def select(self, item) -> list:
+    def select(self, item):
         """
         Attemps to fetch an object with a primary key of the given value from the list.
         :param item: Value of the primary key

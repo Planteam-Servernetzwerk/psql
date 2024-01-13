@@ -181,9 +181,13 @@ class SQLObject:
         return ResponseObjectList(cls.construct(cls._retrieve(kwargs)))
 
     @classmethod
-    def get(cls, **kwargs):
+    def get(cls, primary_value=None, **kwargs):
         """Retrieves the object from the database if it has only one element."""
-        elements = cls.gets(**kwargs)
+        if (primary_value is not None) and (kwargs is None):
+            elements = cls.gets(**{cls.PRIMARY_KEY: primary_value})
+        else:
+            elements = cls.gets(**kwargs)
+
         if len(elements) > 1:
             raise exceptions.ResponseAmbiguousError("There is more than one object matching the given description. Try using gets().")
         elif len(elements) < 1:
@@ -197,10 +201,12 @@ class SQLObject:
             keys += (k + ", ")
         keys = keys.strip(", ")
 
-        if len(searches(self.gets(), self.PRIMARY_KEY, self.primary_value())) == 0:
+        try:
+            self.get(self.primary_value())
+            self._db().query(
+                f"UPDATE {self.TABLE_NAME} SET {self.kwargs(keys_lst)} WHERE {self.PRIMARY_KEY} = {self.primary_value()}")
+        except KeyError:
             self._db().query(f"INSERT INTO {self.TABLE_NAME} ({keys}) VALUES ({self.args(keys_lst)})".strip(", "))
-        else:
-            self._db().query(f"UPDATE {self.TABLE_NAME} SET {self.kwargs(keys_lst)} WHERE {self.PRIMARY_KEY} = {self.primary_value()}")
 
     @classmethod
     def get_next_id(cls):

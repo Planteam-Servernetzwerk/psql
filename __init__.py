@@ -203,10 +203,14 @@ class SQLObject:
 
         try:
             self.get(self.primary_value())
-            self._db().query(
-                f"UPDATE {self.TABLE_NAME} SET {self.kwargs(keys_lst)} WHERE {self.PRIMARY_KEY} = {self.primary_value()}")
         except KeyError:
             self._db().query(f"INSERT INTO {self.TABLE_NAME} ({keys}) VALUES ({self.args(keys_lst)})".strip(", "))
+            return
+        except exceptions.ResponseAmbiguousError:
+            pass
+
+        self._db().query(
+            f"UPDATE {self.TABLE_NAME} SET {self.kwargs(keys_lst)} WHERE {self.PRIMARY_KEY} = {self.primary_value()}")
 
     @classmethod
     def get_next_id(cls):

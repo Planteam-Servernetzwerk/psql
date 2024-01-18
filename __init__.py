@@ -228,7 +228,7 @@ class SQLObject:
             return False
 
     @classmethod
-    def fetchs(cls, **kwargs) -> Union[ResponseObjectList | "[]"]:
+    def fetchs(cls, **kwargs) -> Union[ResponseObjectList, list]:
         """Retrieves a list of objects from the database. Returns [] if no matches are found.
 
         :param kwargs: Keyword Arguments

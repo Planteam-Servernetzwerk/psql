@@ -228,16 +228,16 @@ class SQLObject:
             return False
 
     @classmethod
-    def fetchs(cls, **kwargs) -> Union[ResponseObjectList, list]:
+    def fetchs(cls, **kwargs) -> ResponseObjectList:
         """Retrieves a list of objects from the database. Returns [] if no matches are found.
 
         :param kwargs: Keyword Arguments
-        :returns: `ResponseObjectList` or `None`
+        :returns: `ResponseObjectList`
         """
         try:
             return cls.gets(**kwargs)
         except KeyError:
-            return []
+            return ResponseObjectList([])
 
     @classmethod
     def fetch(cls, primary_value=None, **kwargs) -> any:

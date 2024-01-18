@@ -183,8 +183,8 @@ class SQLObject:
     @classmethod
     def get(cls, primary_value=None, **kwargs):
         """Retrieves the object from the database if it has only one element."""
-        if (primary_value is not None) and (kwargs is None):
-            elements = cls.gets(**{cls.PRIMARY_KEY: primary_value})
+        if primary_value is not None:
+            elements = cls.gets(**{cls.PRIMARY_KEY: primary_value}, **kwargs)
         else:
             elements = cls.gets(**kwargs)
 
@@ -226,6 +226,35 @@ class SQLObject:
             return True
         except KeyError:
             return False
+
+    @classmethod
+    def fetchs(cls, **kwargs) -> Union[ResponseObjectList | "[]"]:
+        """Retrieves a list of objects from the database. Returns [] if no matches are found.
+
+        :param kwargs: Keyword Arguments
+        :returns: `ResponseObjectList` or `None`
+        """
+        try:
+            return cls.gets(**kwargs)
+        except KeyError:
+            return []
+
+    @classmethod
+    def fetch(cls, primary_value=None, **kwargs) -> any:
+        """Retrieves the object from the database if it has only one element.
+        Does not raise error when no matches are found
+
+        :param primary_value: (Optional) The value of the primary key
+        :param kwargs: Keyword Arguments
+        :returns: Object or `None`
+        """
+        try:
+            if primary_value is not None:
+                return cls.get(primary_value, **kwargs)
+            else:
+                return cls.get(**kwargs)
+        except KeyError:
+            return None
 
 
 class Cache:

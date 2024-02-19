@@ -2,6 +2,10 @@ import dbconnect
 from datetime import datetime
 from . import exceptions
 from typing import Union, List, Type
+from hashlib import sha1
+
+
+__version__ = "1.6"
 
 
 OPERATORS = {
@@ -141,7 +145,12 @@ class SQLObject:
         """Creates a dictionary from all SQL keys"""
         return {k: getattr(self, k) for k in self.SQL_KEYS}
 
-    def args(self, keys: Union[list, None] = None):
+    def args(self, keys: Union[list, None] = None) -> str:
+        """Returns a comma separated list of the object attributes represented as positional arguments
+
+        :param keys: Which attributes to include. `None` if every attr should be included.
+        :returns: `str`
+        """
         formatted_pairs = ""
         keys = self.SQL_KEYS if keys is None else keys
         for k in keys:
@@ -152,7 +161,12 @@ class SQLObject:
             formatted_pairs += f"{sql_format(attr)!r}, "
         return formatted_pairs.strip(", ")
 
-    def kwargs(self, keys: Union[list, None] = None):
+    def kwargs(self, keys: Union[list, None] = None) -> str:
+        """Returns a comma separated list of the object attributes represented as SQL-style keyword arguments
+
+        :param keys: Which attributes to include. `None` if every attr should be included.
+        :returns: `str`
+        """
         formatted_pairs = ""
         keys = self.SQL_KEYS if keys is None else keys
         for k in keys:
@@ -162,6 +176,9 @@ class SQLObject:
                 continue
             formatted_pairs += f"{k} = {sql_format(attr)!r}, "
         return formatted_pairs.strip(", ")
+
+    def __hash__(self):
+        return int(sha1(f"{self.SERVER_NAME}/{self.SCHEMA_NAME}/{self.TABLE_NAME}/{self.PRIMARY_KEY}".encode()).hexdigest(), 16)
 
     @staticmethod
     def construct(response) -> list:

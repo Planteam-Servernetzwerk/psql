@@ -177,6 +177,9 @@ class SQLObject:
             formatted_pairs += f"{k} = {sql_format(attr)!r}, "
         return formatted_pairs.strip(", ")
 
+    def __eq__(self, other):
+        return self.primary_value() == other.primary_value()
+
     def __hash__(self):
         return int(sha1(f"{self.SERVER_NAME}/{self.SCHEMA_NAME}/{self.TABLE_NAME}/{self.PRIMARY_KEY}".encode()).hexdigest(), 16)
 

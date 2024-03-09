@@ -5,7 +5,7 @@ from typing import Union, List, Type
 from hashlib import sha1
 
 
-__version__ = "1.7.2"
+__version__ = "1.8"
 
 
 OPERATORS = {
@@ -189,15 +189,20 @@ class SQLObject:
         """See PlWiki for documentation"""
         ...
 
+    @classmethod
+    def refresh_env(cls):
+        return cls._toenv()
+
     @staticmethod
     def construct(response) -> list:
         """Takes in a SQL response and returns a list of objects"""
         raise NotImplementedError
 
     @classmethod
-    def gets(cls, **kwargs) -> ResponseObjectList:
+    def gets(cls, refresh: bool = True, **kwargs) -> ResponseObjectList:
         """Retrieves a list of objects from the database."""
-        cls._toenv()
+        if refresh:
+            cls._toenv()
         if not kwargs:
             return ResponseObjectList(cls.construct(cls._retrieve()))
         for k, v in kwargs.items():
@@ -208,12 +213,12 @@ class SQLObject:
         return ResponseObjectList(cls.construct(cls._retrieve(kwargs)))
 
     @classmethod
-    def get(cls, primary_value=None, **kwargs):
+    def get(cls, primary_value=None, refresh: bool = True, **kwargs):
         """Retrieves the object from the database if it has only one element."""
         if primary_value is not None:
-            elements = cls.gets(**{cls.PRIMARY_KEY: primary_value}, **kwargs)
+            elements = cls.gets(refresh=refresh, **{cls.PRIMARY_KEY: primary_value}, **kwargs)
         else:
-            elements = cls.gets(**kwargs)
+            elements = cls.gets(refresh=refresh, **kwargs)
 
         if len(elements) > 1:
             raise exceptions.ResponseAmbiguousError("There is more than one object matching the given description. Try using gets().")

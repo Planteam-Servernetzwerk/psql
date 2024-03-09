@@ -187,7 +187,7 @@ class SQLObject:
     @classmethod
     def __set_env(cls):
         """See PlWiki for documentation"""
-        raise NotImplementedError
+        ...
 
     @staticmethod
     def construct(response) -> list:

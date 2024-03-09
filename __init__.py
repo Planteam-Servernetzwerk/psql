@@ -5,7 +5,7 @@ from typing import Union, List, Type
 from hashlib import sha1
 
 
-__version__ = "1.8"
+__version__ = "1.8.1"
 
 
 OPERATORS = {
@@ -120,6 +120,8 @@ class SQLObject:
     OPERATORS = OPERATORS
     ENV: dict = {}
 
+    DO_REFRESH: bool = True
+
     @classmethod
     def _db(cls) -> dbconnect.Adapter:
         return set_adapter(cls.SERVER_NAME, cls.SCHEMA_NAME, cls.VERBOSE)
@@ -201,7 +203,7 @@ class SQLObject:
     @classmethod
     def gets(cls, refresh: bool = True, **kwargs) -> ResponseObjectList:
         """Retrieves a list of objects from the database."""
-        if refresh:
+        if refresh and cls.DO_REFRESH:
             cls._toenv()
         if not kwargs:
             return ResponseObjectList(cls.construct(cls._retrieve()))

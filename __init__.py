@@ -118,6 +118,7 @@ class SQLObject:
     PRIMARY_KEY: str = ...
 
     OPERATORS = OPERATORS
+    ENV: dict = {}
 
     @classmethod
     def _db(cls) -> dbconnect.Adapter:
@@ -183,6 +184,11 @@ class SQLObject:
     def __hash__(self):
         return int(sha1(f"{self.SERVER_NAME}/{self.SCHEMA_NAME}/{self.TABLE_NAME}/{self.PRIMARY_KEY}".encode()).hexdigest(), 16)
 
+    @classmethod
+    def __set_env(cls):
+        """See PlWiki for documentation"""
+        raise NotImplementedError
+
     @staticmethod
     def construct(response) -> list:
         """Takes in a SQL response and returns a list of objects"""
@@ -191,6 +197,7 @@ class SQLObject:
     @classmethod
     def gets(cls, **kwargs) -> ResponseObjectList:
         """Retrieves a list of objects from the database."""
+        cls.__set_env()
         if not kwargs:
             return ResponseObjectList(cls.construct(cls._retrieve()))
         for k, v in kwargs.items():

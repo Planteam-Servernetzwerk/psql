@@ -148,24 +148,18 @@ class SQLObject:
         """Creates a dictionary from all SQL keys"""
         return {k: getattr(self, k) for k in self.SQL_KEYS}
 
-    def args(self, keys: Union[list, None] = None) -> str:
-        """Returns a comma separated list of the object attributes represented as positional arguments
+    def args(self, keys: Union[list, None] = None) -> tuple:
+        """Returns a tuple of the object attributes represented as positional arguments
 
         :param keys: Which attributes to include. `None` if every attr should be included.
-        :returns: `str`
+        :returns: `tuple`
         """
-        formatted_pairs = ""
         keys = self.SQL_KEYS if keys is None else keys
-        for k in keys:
-            attr = getattr(self, k)
-            if attr is None:
-                formatted_pairs += f"NULL, "
-                continue
-            formatted_pairs += f"{sql_format(attr)!r}, "
-        return formatted_pairs.strip(", ")
+        return tuple(getattr(self, key) for key in keys)
 
     def kwargs(self, keys: Union[list, None] = None) -> str:
-        """Returns a comma separated list of the object attributes represented as SQL-style keyword arguments
+        """DEPRECATED.
+        Returns a comma separated list of the object attributes represented as SQL-style keyword arguments
 
         :param keys: Which attributes to include. `None` if every attr should be included.
         :returns: `str`
@@ -236,9 +230,13 @@ class SQLObject:
         keys = keys.strip(", ")
 
         if not self.exists(self.primary_value()):
-            self._db().query(f"INSERT INTO {self.TABLE_NAME} ({keys}) VALUES ({self.args(keys_lst)})".strip(", "))
+            self._db().query(f"INSERT INTO {self.TABLE_NAME} ({keys}) VALUES ({('%s, '*len(keys)).strip(', ')})", self.args(keys_lst))
         else:
-            self._db().query(f"UPDATE {self.TABLE_NAME} SET {self.kwargs(keys_lst)} WHERE {self.PRIMARY_KEY} = {self.primary_value()!r}")
+            kw_keys = ""
+            for key in keys:
+                kw_keys += f"{key} = %s, "
+            self._db().query(f"UPDATE {self.TABLE_NAME} SET {kw_keys.strip(', ')} WHERE {self.PRIMARY_KEY} = %s",
+                             self.args(keys_lst) + (self.primary_value()))
 
     @classmethod
     def get_next_id(cls):
@@ -290,8 +288,23 @@ class SQLObject:
         except KeyError:
             return None
 
+    def cache(self, key: str, func: callable) -> any:
+        """Used to retrieve value from instance environment cache and assign it to cache if it is not already there.
+
+        :param key: Key in the environment dictionary.
+        :param func: Function that returns the wanted value
+        :return: The value from cache.
+        """
+        try:
+            return self.ENV[key]
+        except KeyError:
+            self.ENV[key] = func()
+            print(f"{self}\t{self.ENV}")
+            return self.ENV[key]
+
 
 class Cache:
+    """DEPRECATED, use `SQLObject.cache` instead"""
     def __init__(self, stored_type, attr=None):
         self.cache = []
         self.cls = stored_type

@@ -5,7 +5,7 @@ from typing import Union, List, Type
 from hashlib import sha1
 
 
-__version__ = "1.8.2"
+__version__ = "1.8.3"
 
 
 OPERATORS = {
@@ -230,13 +230,13 @@ class SQLObject:
         keys = keys.strip(", ")
 
         if not self.exists(self.primary_value()):
-            self._db().query(f"INSERT INTO {self.TABLE_NAME} ({keys}) VALUES ({('%s, '*len(keys)).strip(', ')})", self.args(keys_lst))
+            self._db().query(f"INSERT INTO {self.TABLE_NAME} ({keys}) VALUES ({('%s, '*len(keys_lst)).strip(', ')})", self.args(keys_lst))
         else:
             kw_keys = ""
-            for key in keys:
+            for key in keys_lst:
                 kw_keys += f"{key} = %s, "
             self._db().query(f"UPDATE {self.TABLE_NAME} SET {kw_keys.strip(', ')} WHERE {self.PRIMARY_KEY} = %s",
-                             self.args(keys_lst) + (self.primary_value()))
+                             self.args(keys_lst) + (self.primary_value(),))
 
     @classmethod
     def get_next_id(cls):
@@ -299,7 +299,6 @@ class SQLObject:
             return self.ENV[key]
         except KeyError:
             self.ENV[key] = func()
-            print(f"{self}\t{self.ENV}")
             return self.ENV[key]
 
 

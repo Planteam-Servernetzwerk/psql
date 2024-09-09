@@ -1,5 +1,5 @@
 import dbconnect
-import datetime
+from datetime import datetime, date
 from . import exceptions
 from typing import Union, List, Type
 from hashlib import sha1
@@ -62,7 +62,7 @@ def search(table: list, attr: str, value: any) -> any:
 
 
 def sql_format(attr: any):
-    if isinstance(attr, datetime.datetime) or isinstance(attr, datetime.date):
+    if isinstance(attr, datetime) or isinstance(attr, date):
         return attr.strftime("%Y-%m-%d %H:%M:%S")
     return attr
 

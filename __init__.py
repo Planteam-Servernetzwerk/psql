@@ -5,7 +5,7 @@ from typing import Union, List, Type
 from hashlib import sha1
 
 
-__version__ = "1.8.3"
+__version__ = "1.8.4"
 
 
 OPERATORS = {

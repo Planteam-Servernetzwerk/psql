@@ -118,14 +118,16 @@ class SQLObject:
     PRIMARY_KEY: str = ...
 
     OPERATORS = OPERATORS
-    ENV: dict = {}
 
     DO_REFRESH: bool = True
+
+    def __init__(self):
+        self.ENV = {}
+        self._cache = DictCache()
 
     @classmethod
     def _db(cls) -> dbconnect.Adapter:
         return set_adapter(cls.SERVER_NAME, cls.SCHEMA_NAME, cls.VERBOSE)
-
 
     @classmethod
     def _retrieve(cls, constrictions: dict = None):
@@ -251,6 +253,22 @@ class SQLObject:
             raise TypeError(f"Primary key needs to be int, not {type(result)}.")
 
     @classmethod
+    def get_increment(cls) -> int:
+        """Checks for gaps in the sequence of primary values of objects.
+        :return: The first missing primary value in the sequence.
+        """
+        objs = cls.gets()
+        previous = None
+        for obj in objs:
+            if not previous:
+                previous = obj
+                continue
+            expected = previous.primary_value() + 1
+            if not expected == obj.primary_value():
+                return expected
+            previous = obj
+
+    @classmethod
     def exists(cls, value_primary: any):
         try:
             kwargs = {cls.PRIMARY_KEY: value_primary}
@@ -288,18 +306,14 @@ class SQLObject:
         except KeyError:
             return None
 
-    def cache(self, key: str, func: callable) -> any:
+    def cache(self, key: any, func: callable) -> any:
         """Used to retrieve value from instance environment cache and assign it to cache if it is not already there.
 
         :param key: Key in the environment dictionary.
         :param func: Function that returns the wanted value
         :return: The value from cache.
         """
-        try:
-            return self.ENV[key]
-        except KeyError:
-            self.ENV[key] = func()
-            return self.ENV[key]
+        return self._cache.cache(key, func)
 
 
 class Cache:
@@ -316,3 +330,24 @@ class Cache:
             obj = self.cls.get(**{self.attr: item})
             self.cache.append(obj)
             return obj
+
+
+class DictCache:
+    def __init__(self):
+        self._cache = {}
+
+    def cache(self, key: any, func: callable) -> any:
+        """Used to retrieve value from instance environment cache and assign it to cache if it is not already there.
+
+        :param key: Key in the environment dictionary.
+        :param func: Function that returns the wanted value
+        :return: The value from cache.
+        """
+        try:
+            return self._cache[key]
+        except KeyError:
+            self._cache[key] = func()
+            return self._cache[key]
+
+    def __repr__(self) -> str:
+        return str(self._cache)

@@ -5,7 +5,7 @@ from typing import Union, List, Type
 from hashlib import sha1
 
 
-__version__ = "1.8.4"
+__version__ = "1.8.5"
 
 
 OPERATORS = {
@@ -258,15 +258,23 @@ class SQLObject:
         :return: The first missing primary value in the sequence.
         """
         objs = cls.gets()
+        print(objs)
+        i = None
         previous = None
         for obj in objs:
             if not previous:
                 previous = obj
-                continue
             expected = previous.primary_value() + 1
+            i = expected
+            print(expected)
+            if not previous:
+                continue
             if not expected == obj.primary_value():
+                print(f"returning {expected}")
                 return expected
             previous = obj
+        print(f"found no gap, so {i + 1}")
+        return i + 1
 
     @classmethod
     def exists(cls, value_primary: any):

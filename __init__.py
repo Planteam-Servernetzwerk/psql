@@ -259,23 +259,11 @@ class SQLObject:
         :return: The first missing primary value in the sequence.
         """
         objs = cls.gets()
-        print(objs)
-        i = None
-        previous = None
-        for obj in objs:
-            if not previous:
-                previous = obj
-            expected = previous.primary_value() + 1
-            i = expected
-            print(expected)
-            if not previous:
-                continue
-            if not expected == obj.primary_value():
-                print(f"returning {expected}")
-                return expected
-            previous = obj
-        print(f"found no gap, so {i + 1}")
-        return i + 1
+        primary_values = [x.primary_value() for x in objs]
+        for i in range(1, primary_values[-1] + 1, 1):
+            if i not in primary_values:
+                return i
+        return primary_values[-1] + 1
 
     @classmethod
     def exists(cls, value_primary: any):

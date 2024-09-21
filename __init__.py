@@ -119,6 +119,7 @@ class SQLObject:
 
     OPERATORS = OPERATORS
 
+    CLS_ENV = {}
     DO_REFRESH: bool = True
 
     def __init__(self):

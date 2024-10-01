@@ -5,7 +5,7 @@ from typing import Union, List, Type
 from hashlib import sha1
 
 
-__version__ = "1.8.6"
+__version__ = "1.11.1"
 
 
 OPERATORS = {
@@ -134,15 +134,13 @@ class SQLObject:
     def _retrieve(cls, constrictions: dict = None):
         """Fetches data from the database under given constrictions"""
         where = "WHERE "
+        values = []
         if constrictions:
             for k, v in constrictions.items():
-                operator = v[:2]
-                if operator == "IS":
-                    where += f"{k} {cls.OPERATORS[operator]} AND "
-                else:
-                    where += f"{k} {cls.OPERATORS[operator]} {v[2:]!r} AND "
+                values.append(v)
+                where += f"{k} = %s AND "
             where = where.strip(" AND ")
-        return cls._db().query(f"SELECT * FROM {cls.TABLE_NAME} {where}".strip("WHERE "))
+        return cls._db().query(f"SELECT * FROM {cls.TABLE_NAME} {where}".strip("WHERE "), tuple(values))
 
     def primary_value(self):
         return getattr(self, self.PRIMARY_KEY)
@@ -204,11 +202,6 @@ class SQLObject:
             cls._toenv()
         if not kwargs:
             return ResponseObjectList(cls.construct(cls._retrieve()))
-        for k, v in kwargs.items():
-            if v is None:
-                kwargs[k] = "IS"
-            elif str(v)[:2] not in cls.OPERATORS:
-                kwargs[k] = "==" + str(v)
         return ResponseObjectList(cls.construct(cls._retrieve(kwargs)))
 
     @classmethod
@@ -232,7 +225,15 @@ class SQLObject:
             keys += (k + ", ")
         keys = keys.strip(", ")
 
-        if not self.exists(self.primary_value()):
+        insert = False
+
+        if self.primary_value() is Ellipsis:
+            insert = True
+        else:
+            if not self.exists(self.primary_value()):
+                insert = True
+
+        if insert:
             self._db().query(f"INSERT INTO {self.TABLE_NAME} ({keys}) VALUES ({('%s, '*len(keys_lst)).strip(', ')})", self.args(keys_lst))
         else:
             kw_keys = ""
@@ -259,6 +260,10 @@ class SQLObject:
         :return: The first missing primary value in the sequence.
         """
         objs = cls.gets()
+
+        if len(objs) == 0:
+            return 1
+
         primary_values = [x.primary_value() for x in objs]
         for i in range(1, primary_values[-1] + 1, 1):
             if i not in primary_values:

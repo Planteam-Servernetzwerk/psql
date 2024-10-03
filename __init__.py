@@ -5,7 +5,7 @@ from typing import Union, List, Type
 from hashlib import sha1
 
 
-__version__ = "1.11.1"
+__version__ = "1.12"
 
 
 OPERATORS = {
@@ -181,15 +181,6 @@ class SQLObject:
     def __hash__(self):
         return int(sha1(f"{self.SERVER_NAME}/{self.SCHEMA_NAME}/{self.TABLE_NAME}/{self.PRIMARY_KEY}".encode()).hexdigest(), 16)
 
-    @classmethod
-    def _toenv(cls):
-        """See PlWiki for documentation"""
-        ...
-
-    @classmethod
-    def refresh_env(cls):
-        return cls._toenv()
-
     @staticmethod
     def construct(response) -> list:
         """Takes in a SQL response and returns a list of objects"""
@@ -198,8 +189,6 @@ class SQLObject:
     @classmethod
     def gets(cls, refresh: bool = True, **kwargs) -> ResponseObjectList:
         """Retrieves a list of objects from the database."""
-        if refresh and cls.DO_REFRESH:
-            cls._toenv()
         if not kwargs:
             return ResponseObjectList(cls.construct(cls._retrieve()))
         return ResponseObjectList(cls.construct(cls._retrieve(kwargs)))

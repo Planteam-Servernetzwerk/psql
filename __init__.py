@@ -5,7 +5,7 @@ from typing import Union, List, Type
 from hashlib import sha1
 
 
-__version__ = "1.12"
+__version__ = "1.12.1"
 
 
 OPERATORS = {
@@ -101,11 +101,16 @@ class ResponseObjectList(list):
     def selectwhere(self, **kwargs) -> list:
         if len(self.data) == 0:
             raise IndexError("The list is empty")
-        selections = []
-        for k, v in kwargs.items():
-            results = set(searches(self.data, k, v))
-            selections.append(results)
-        return list(intersect(*selections))
+        result = []
+        for datum in self.data:
+            matches = True
+            for k, v in kwargs.items():
+                if getattr(datum, k) != v:
+                    matches = False
+                    break
+            if matches:
+                result.append(datum)
+        return result
 
 
 class SQLObject:

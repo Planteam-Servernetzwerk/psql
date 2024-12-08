@@ -1,11 +1,16 @@
 import dbconnect
 from datetime import datetime, date
 from . import exceptions
+import typing as t
 from typing import Union, List, Type
 from hashlib import sha1
 
 
-__version__ = "1.12.1"
+__version__ = "1.12.2"
+
+
+SQLType = t.TypeVar("SQLType", bound="SQLObject")
+T = t.TypeVar("T")
 
 
 OPERATORS = {
@@ -73,13 +78,13 @@ def set_adapter(server: str, schema: str, verbose: bool) -> dbconnect.Adapter:
     return dbconnect.Adapter(server, schema, verbose)
 
 
-class ResponseObjectList(list):
-    def __init__(self, _list: list):
+class ResponseObjectList(t.List[T], t.Generic[T]):
+    def __init__(self, _list: List[T]):
         super().__init__(_list)
         self.data = _list
         types = list({type(x) for x in _list})
         if len(types) == 1:
-            self.type: Type[SQLObject] = types[0]
+            self.type: Type[T] = types[0]
         elif len(types) == 0:
             self.type = None
         else:
@@ -192,14 +197,14 @@ class SQLObject:
         raise NotImplementedError
 
     @classmethod
-    def gets(cls, refresh: bool = True, **kwargs) -> ResponseObjectList:
+    def gets(cls: t.Type[SQLType], refresh: bool = True, **kwargs) -> ResponseObjectList[SQLType]:
         """Retrieves a list of objects from the database."""
         if not kwargs:
             return ResponseObjectList(cls.construct(cls._retrieve()))
         return ResponseObjectList(cls.construct(cls._retrieve(kwargs)))
 
     @classmethod
-    def get(cls, primary_value=None, refresh: bool = True, **kwargs):
+    def get(cls: t.Type[SQLType], primary_value=None, refresh: bool = True, **kwargs) -> SQLType:
         """Retrieves the object from the database if it has only one element."""
         if primary_value is not None:
             elements = cls.gets(refresh=refresh, **{cls.PRIMARY_KEY: primary_value}, **kwargs)
@@ -265,7 +270,7 @@ class SQLObject:
         return primary_values[-1] + 1
 
     @classmethod
-    def exists(cls, value_primary: any):
+    def exists(cls, value_primary: any) -> bool:
         try:
             kwargs = {cls.PRIMARY_KEY: value_primary}
             cls.get(**kwargs)
@@ -274,7 +279,7 @@ class SQLObject:
             return False
 
     @classmethod
-    def fetchs(cls, **kwargs) -> ResponseObjectList:
+    def fetchs(cls: t.Type[SQLType], **kwargs) -> ResponseObjectList[SQLType]:
         """Retrieves a list of objects from the database. Returns [] if no matches are found.
 
         :param kwargs: Keyword Arguments
@@ -286,7 +291,7 @@ class SQLObject:
             return ResponseObjectList([])
 
     @classmethod
-    def fetch(cls, primary_value=None, **kwargs) -> any:
+    def fetch(cls: t.Type[SQLType], primary_value=None, **kwargs) -> SQLType:
         """Retrieves the object from the database if it has only one element.
         Does not raise error when no matches are found
 

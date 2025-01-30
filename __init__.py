@@ -138,6 +138,10 @@ class SQLObject:
 
     @classmethod
     def _db(cls) -> dbconnect.Adapter:
+        return cls.db()
+
+    @classmethod
+    def db(cls) -> dbconnect.Adapter:
         return set_adapter(cls.SERVER_NAME, cls.SCHEMA_NAME, cls.VERBOSE)
 
     @classmethod
@@ -150,7 +154,7 @@ class SQLObject:
                 values.append(v)
                 where += f"{k} = %s AND "
             where = where.strip(" AND ")
-        return cls._db().query(f"SELECT * FROM {cls.TABLE_NAME} {where}".strip("WHERE "), tuple(values))
+        return cls.db().query(f"SELECT * FROM {cls.TABLE_NAME} {where}".strip("WHERE "), tuple(values))
 
     def primary_value(self):
         return getattr(self, self.PRIMARY_KEY)
@@ -233,12 +237,12 @@ class SQLObject:
                 insert = True
 
         if insert:
-            self._db().query(f"INSERT INTO {self.TABLE_NAME} ({keys}) VALUES ({('%s, '*len(keys_lst)).strip(', ')})", self.args(keys_lst))
+            self.db().query(f"INSERT INTO {self.TABLE_NAME} ({keys}) VALUES ({('%s, '*len(keys_lst)).strip(', ')})", self.args(keys_lst))
         else:
             kw_keys = ""
             for key in keys_lst:
                 kw_keys += f"{key} = %s, "
-            self._db().query(f"UPDATE {self.TABLE_NAME} SET {kw_keys.strip(', ')} WHERE {self.PRIMARY_KEY} = %s",
+            self.db().query(f"UPDATE {self.TABLE_NAME} SET {kw_keys.strip(', ')} WHERE {self.PRIMARY_KEY} = %s",
                              self.args(keys_lst) + (self.primary_value(),))
 
     @classmethod

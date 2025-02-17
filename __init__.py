@@ -4,9 +4,10 @@ from . import exceptions
 import typing as t
 from typing import Union, List, Type
 from hashlib import sha1
+from functools import lru_cache
 
 
-__version__ = "1.12.2"
+__version__ = "1.12.3"
 
 
 SQLType = t.TypeVar("SQLType", bound="SQLObject")
@@ -208,6 +209,7 @@ class SQLObject:
         return ResponseObjectList(cls.construct(cls._retrieve(kwargs)))
 
     @classmethod
+    @lru_cache(128)  # TODO: add timeout to clear cache
     def get(cls: t.Type[SQLType], primary_value=None, refresh: bool = True, **kwargs) -> SQLType:
         """Retrieves the object from the database if it has only one element."""
         if primary_value is not None:
@@ -244,6 +246,7 @@ class SQLObject:
                 kw_keys += f"{key} = %s, "
             self.db().query(f"UPDATE {self.TABLE_NAME} SET {kw_keys.strip(', ')} WHERE {self.PRIMARY_KEY} = %s",
                              self.args(keys_lst) + (self.primary_value(),))
+        self.get.cache_clear()
 
     @classmethod
     def get_next_id(cls):

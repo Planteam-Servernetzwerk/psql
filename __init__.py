@@ -7,7 +7,7 @@ from hashlib import sha1
 from functools import lru_cache
 
 
-__version__ = "1.12.3"
+__version__ = "1.12.4"
 
 
 SQLType = t.TypeVar("SQLType", bound="SQLObject")
@@ -139,10 +139,12 @@ class SQLObject:
 
     @classmethod
     def _db(cls) -> dbconnect.Adapter:
+        self.get.cache_clear()
         return cls.db()
 
     @classmethod
     def db(cls) -> dbconnect.Adapter:
+        self.get.cache_clear()
         return set_adapter(cls.SERVER_NAME, cls.SCHEMA_NAME, cls.VERBOSE)
 
     @classmethod
@@ -209,7 +211,7 @@ class SQLObject:
         return ResponseObjectList(cls.construct(cls._retrieve(kwargs)))
 
     @classmethod
-    @lru_cache(128)  # TODO: add timeout to clear cache
+    @lru_cache(128)
     def get(cls: t.Type[SQLType], primary_value=None, refresh: bool = True, **kwargs) -> SQLType:
         """Retrieves the object from the database if it has only one element."""
         if primary_value is not None:

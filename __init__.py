@@ -7,7 +7,7 @@ from hashlib import sha1
 from functools import lru_cache
 
 
-__version__ = "1.12.4"
+__version__ = "1.12.5"
 
 
 SQLType = t.TypeVar("SQLType", bound="SQLObject")
@@ -139,12 +139,12 @@ class SQLObject:
 
     @classmethod
     def _db(cls) -> dbconnect.Adapter:
-        self.get.cache_clear()
+        cls.get.cache_clear()
         return cls.db()
 
     @classmethod
     def db(cls) -> dbconnect.Adapter:
-        self.get.cache_clear()
+        cls.get.cache_clear()
         return set_adapter(cls.SERVER_NAME, cls.SCHEMA_NAME, cls.VERBOSE)
 
     @classmethod

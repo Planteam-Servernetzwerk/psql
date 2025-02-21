@@ -7,7 +7,7 @@ from hashlib import sha1
 from functools import lru_cache
 
 
-__version__ = "1.12.5"
+__version__ = "1.12.6"
 
 
 SQLType = t.TypeVar("SQLType", bound="SQLObject")
@@ -139,13 +139,15 @@ class SQLObject:
 
     @classmethod
     def _db(cls) -> dbconnect.Adapter:
-        cls.get.cache_clear()
-        return cls.db()
+        """Does not clear the cache"""
+        return set_adapter(cls.SERVER_NAME, cls.SCHEMA_NAME, cls.VERBOSE)
+
 
     @classmethod
     def db(cls) -> dbconnect.Adapter:
+        """Clears the cache"""
         cls.get.cache_clear()
-        return set_adapter(cls.SERVER_NAME, cls.SCHEMA_NAME, cls.VERBOSE)
+        return cls._db()
 
     @classmethod
     def _retrieve(cls, constrictions: dict = None):
@@ -157,7 +159,7 @@ class SQLObject:
                 values.append(v)
                 where += f"{k} = %s AND "
             where = where.strip(" AND ")
-        return cls.db().query(f"SELECT * FROM {cls.TABLE_NAME} {where}".strip("WHERE "), tuple(values))
+        return cls._db().query(f"SELECT * FROM {cls.TABLE_NAME} {where}".strip("WHERE "), tuple(values))
 
     def primary_value(self):
         return getattr(self, self.PRIMARY_KEY)
@@ -241,12 +243,12 @@ class SQLObject:
                 insert = True
 
         if insert:
-            self.db().query(f"INSERT INTO {self.TABLE_NAME} ({keys}) VALUES ({('%s, '*len(keys_lst)).strip(', ')})", self.args(keys_lst))
+            self._db().query(f"INSERT INTO {self.TABLE_NAME} ({keys}) VALUES ({('%s, '*len(keys_lst)).strip(', ')})", self.args(keys_lst))
         else:
             kw_keys = ""
             for key in keys_lst:
                 kw_keys += f"{key} = %s, "
-            self.db().query(f"UPDATE {self.TABLE_NAME} SET {kw_keys.strip(', ')} WHERE {self.PRIMARY_KEY} = %s",
+            self._db().query(f"UPDATE {self.TABLE_NAME} SET {kw_keys.strip(', ')} WHERE {self.PRIMARY_KEY} = %s",
                              self.args(keys_lst) + (self.primary_value(),))
         self.get.cache_clear()
 

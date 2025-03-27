@@ -147,6 +147,7 @@ class SQLObject:
     def db(cls) -> dbconnect.Adapter:
         """Clears the cache"""
         cls.get.cache_clear()
+        cls.gets.cache_clear()
         return cls._db()
 
     @classmethod
@@ -156,8 +157,11 @@ class SQLObject:
         values = []
         if constrictions:
             for k, v in constrictions.items():
-                values.append(v)
-                where += f"{k} = %s AND "
+                if v is None:
+                    where += f"{k} IS NULL AND "
+                else:
+                    values.append(v)
+                    where += f"{k} = %s AND "
             where = where.strip(" AND ")
         return cls._db().query(f"SELECT * FROM {cls.TABLE_NAME} {where}".strip("WHERE "), tuple(values))
 
@@ -206,6 +210,7 @@ class SQLObject:
         raise NotImplementedError
 
     @classmethod
+    @lru_cache(32)
     def gets(cls: t.Type[SQLType], refresh: bool = True, **kwargs) -> ResponseObjectList[SQLType]:
         """Retrieves a list of objects from the database."""
         if not kwargs:
@@ -251,6 +256,7 @@ class SQLObject:
             self._db().query(f"UPDATE {self.TABLE_NAME} SET {kw_keys.strip(', ')} WHERE {self.PRIMARY_KEY} = %s",
                              self.args(keys_lst) + (self.primary_value(),))
         self.get.cache_clear()
+        self.gets.cache_clear()
 
     @classmethod
     def get_next_id(cls):

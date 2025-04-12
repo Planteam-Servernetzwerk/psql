@@ -150,8 +150,7 @@ class SQLObject:
     @classmethod
     def db(cls) -> dbconnect.Adapter:
         """Clears the cache"""
-        cls.get.cache_clear()
-        cls.gets.cache_clear()
+        #cls.gets.cache_clear()
         return cls._db()
 
     @classmethod
@@ -214,7 +213,7 @@ class SQLObject:
         raise NotImplementedError
 
     @classmethod
-    @lru_cache(32)
+    #@lru_cache(1024)
     def gets(cls: t.Type[SQLType], refresh: bool = True, **kwargs) -> ResponseObjectList[SQLType]:
         """Retrieves a list of objects from the database."""
         if not kwargs:
@@ -222,7 +221,6 @@ class SQLObject:
         return ResponseObjectList(cls.construct(cls._retrieve(kwargs)))
 
     @classmethod
-    @lru_cache(128)
     def get(cls: t.Type[SQLType], primary_value=None, refresh: bool = True, **kwargs) -> SQLType:
         """Retrieves the object from the database if it has only one element."""
         if primary_value is not None:
@@ -252,15 +250,13 @@ class SQLObject:
                 insert = True
 
         if insert:
-            self._db().query(f"INSERT INTO {self.TABLE_NAME} ({keys}) VALUES ({('%s, '*len(keys_lst)).strip(', ')})", self.args(keys_lst))
+            self.db().query(f"INSERT INTO {self.TABLE_NAME} ({keys}) VALUES ({('%s, '*len(keys_lst)).strip(', ')})", self.args(keys_lst))
         else:
             kw_keys = ""
             for key in keys_lst:
                 kw_keys += f"{key} = %s, "
-            self._db().query(f"UPDATE {self.TABLE_NAME} SET {kw_keys.strip(', ')} WHERE {self.PRIMARY_KEY} = %s",
+            self.db().query(f"UPDATE {self.TABLE_NAME} SET {kw_keys.strip(', ')} WHERE {self.PRIMARY_KEY} = %s",
                              self.args(keys_lst) + (self.primary_value(),))
-        self.get.cache_clear()
-        self.gets.cache_clear()
 
     @classmethod
     def get_next_id(cls):

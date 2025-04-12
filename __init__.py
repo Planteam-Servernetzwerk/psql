@@ -7,7 +7,7 @@ from hashlib import sha1
 from functools import lru_cache
 
 
-__version__ = "1.12.7"
+__version__ = "1.12.8"
 
 
 SQLType = t.TypeVar("SQLType", bound="SQLObject")
@@ -133,6 +133,8 @@ class SQLObject:
     CLS_ENV = {}
     DO_REFRESH: bool = True
 
+    adapter = None
+
     def __init__(self):
         self.ENV = {}
         self._cache = DictCache()
@@ -140,7 +142,9 @@ class SQLObject:
     @classmethod
     def _db(cls) -> dbconnect.Adapter:
         """Does not clear the cache"""
-        return set_adapter(cls.SERVER_NAME, cls.SCHEMA_NAME, cls.VERBOSE)
+        if cls.adapter is None:
+            cls.adapter = set_adapter(cls.SERVER_NAME, cls.SCHEMA_NAME, cls.VERBOSE)
+        return cls.adapter
 
 
     @classmethod

@@ -8,7 +8,7 @@ from functools import lru_cache
 from types import EllipsisType
 
 
-__version__ = "1.12.6"
+__version__ = "1.12.9"
 
 
 SQLType = t.TypeVar("SQLType", bound="SQLObject")
@@ -27,10 +27,10 @@ OPERATORS = {
 
 
 def intersect(*args) -> list:
-    """
-    Creates a conjunction between multiple lists
-    :param args: Lists to join
-    :return: A ∪ B ∪ C ∪ ... ∪ Z
+    """@brief Erstellt eine Konjunktion mindestens zweier Mengen.
+
+    @param args Mengen
+    @returns A ∪ B ∪ C ∪ ... ∪ Z
     """
     _list = list(args)
     result = []
@@ -82,7 +82,13 @@ def set_adapter(server: str, schema: str, verbose: bool) -> dbconnect.Adapter:
 
 
 class ResponseObjectList(t.List[T], t.Generic[T]):
+    """@brief Listenartiges Objekt für SQL-Rückgaben."""
+
     def __init__(self, _list: List[T]):
+        """@brief Konstruktor.
+
+        @param _list Liste an Objekten gleichen Typs.
+        """
         super().__init__(_list)
         self.data = _list
         types = list({type(x) for x in _list})
@@ -97,16 +103,23 @@ class ResponseObjectList(t.List[T], t.Generic[T]):
         return self.data[item]
 
     def select(self, item):
-        """
-        Attemps to fetch an object with a primary key of the given value from the list.
-        :param item: Value of the primary key
-        :return: Object
+        """@brief Versucht, ein einziges Objekt eines angegebenen Wertes für den Primärschlüssel aus der Liste zu finden.
+
+        @param item Wert des Primärschlüssels
+        @returns Objekt
+        @throws IndexError Falls die Liste leer ist.
         """
         if len(self.data) == 0:
             raise IndexError("The list is empty")
         return search(self.data, self.type.PRIMARY_KEY, item)
 
     def selectwhere(self, **kwargs) -> list:
+        """@brief Versucht, alle Objekte aus der Liste zu finden, die die über die Keyword-Arguments übermittelten Werte haben.
+
+        @param kwargs Erforderliche Werte (Values) für Spalten (Keys)
+        @returns Alle in Frage kommenden Objekte
+        @throws IndexError Falls die Liste leer ist.
+        """
         if len(self.data) == 0:
             raise IndexError("The list is empty")
         result = []
@@ -122,18 +135,54 @@ class ResponseObjectList(t.List[T], t.Generic[T]):
 
 
 class SQLObject:
+    """@brief Schablone für die Darstellung einer SQL-Tabelle. Von ihr muß geerbt werden."""
+
+    ## @var SERVER_NAME
+    #  @brief `dbconnect`-kompatible Adresse des SQL-Servers.
     SERVER_NAME: str = ...
+
+    ## @var SCHEMA_NAME
+    #  @brief Name der SQL-Datenbank.
     SCHEMA_NAME: str = ...
+
+    ## @var TABLE_NAME
+    #  @brief Name der SQL-Tabelle.
     TABLE_NAME: str = ...
+
+    ## @var VERBOSE
+    #  @brief Ob Ausgaben in `stdout` sichtbar (`True`) oder nicht (`False`) sein sollen.
     VERBOSE: bool = True
 
+
+    ## @var SQL_KEYS
+    #  @brief Liste sämtlicher Spaltennamen der SQL-Tabelle in richtiger Reihenfolge.
+    #  Die Klasse muß jeden aufgeführten Spaltennamen in gleicher Schreibweise als Attribut, wie immer gearthet, definieren.
     SQL_KEYS: List[str] = ...
+
+    ## @var PRIMARY_KEY
+    #  @brief Spaltenname des Primärschlüssels.
     PRIMARY_KEY: str = ...
 
+    
+    ## @var OPERATORS
+    #  Abbildung von SQL-Operatoren wie `=, >, <, >=, NOT` auf zweistellige Zeichenketten, um Ungleichungen in \ref gets umzusetzen.
     OPERATORS = OPERATORS
 
+
+    ## @var CLS_ENV
+    #  @brief Cache
+    #  @deprecated Veraltet
     CLS_ENV = {}
+
+    ## @var DO_REFRESH
+    #  @brief Flagge zur Cache-Invalidierung
+    #  @deprecated Veraltet
     DO_REFRESH: bool = True
+
+
+    ## @var adapter
+    #  @brief `dbconnect.Adapter`-Objekt, mit dem Abfragen durchgeführt werden.
+    adapter = None
 
     def __init__(self):
         self.ENV = {}
@@ -141,50 +190,57 @@ class SQLObject:
 
     @classmethod
     def _db(cls) -> dbconnect.Adapter:
-        """Does not clear the cache"""
-        return set_adapter(cls.SERVER_NAME, cls.SCHEMA_NAME, cls.VERBOSE)
+        """@returns `dbconnect.Adapter`-Objekt aus den vorher definierten Werten zu Serveradresse und Datenbankname"""
+        if cls.adapter is None:
+            cls.adapter = set_adapter(cls.SERVER_NAME, cls.SCHEMA_NAME, cls.VERBOSE)
+        return cls.adapter
 
 
     @classmethod
     def db(cls) -> dbconnect.Adapter:
-        """Clears the cache"""
-        cls.get.cache_clear()
+        """@brief Alias für \ref _db"""
+        #cls.gets.cache_clear()
         return cls._db()
 
     @classmethod
     def _retrieve(cls, constrictions: dict = None):
-        """Fetches data from the database under given constrictions"""
+        """@brief Gibt alle Spalten aus der Tabelle zurück, die ggf. gewisse Suchkriterien erfüllen.
+
+        @param constrictions (optional) Suchkriterien im Key-Value-Format.
+        """
         where = "WHERE "
         values = []
         if constrictions:
             for k, v in constrictions.items():
-                values.append(v)
-                where += f"{k} = %s AND "
+                if v is None:
+                    where += f"{k} IS NULL AND "
+                else:
+                    values.append(v)
+                    where += f"{k} = %s AND "
             where = where.strip(" AND ")
         return cls._db().query(f"SELECT * FROM {cls.TABLE_NAME} {where}".strip("WHERE "), tuple(values))
 
     def primary_value(self):
+        """@returns Wert des Primärschlüssels"""
         return getattr(self, self.PRIMARY_KEY)
 
     def argsdict(self) -> dict:
-        """Creates a dictionary from all SQL keys"""
+        """@brief Stellt die SQL-Attribute des Objektes in einem Dictionary dar."""
         return {k: getattr(self, k) for k in self.SQL_KEYS}
 
     def args(self, keys: Union[list, None] = None) -> tuple:
-        """Returns a tuple of the object attributes represented as positional arguments
+        """@brief Erstellt ein Tupel, das alle SQL-Attribute in der in \ref SQL_KEYS angegebenen Reihenfolge enthält.
 
-        :param keys: Which attributes to include. `None` if every attr should be included.
-        :returns: `tuple`
+        @param keys (optional) Liste der Spalten, die berücksichtigt werden sollen. `None` für alle aus \ref SQL_KEYS.
         """
         keys = self.SQL_KEYS if keys is None else keys
         return tuple(getattr(self, key) for key in keys)
 
     def kwargs(self, keys: Union[list, None] = None) -> str:
-        """DEPRECATED.
-        Returns a comma separated list of the object attributes represented as SQL-style keyword arguments
+        """@brief Returns a comma separated list of the object attributes represented as SQL-style keyword arguments
+        @deprecated Veraltet
 
-        :param keys: Which attributes to include. `None` if every attr should be included.
-        :returns: `str`
+        @param keys (optional) Liste der Spalten, die berücksichtigt werden sollen. `None` für alle aus \ref SQL_KEYS.
         """
         formatted_pairs = ""
         keys = self.SQL_KEYS if keys is None else keys
@@ -204,20 +260,30 @@ class SQLObject:
 
     @staticmethod
     def construct(response) -> list:
-        """Takes in a SQL response and returns a list of objects"""
+        """@brief Erstellt eine Liste an eigenen Objekten aus einer SQL-Rückgabe."""
         raise NotImplementedError
 
     @classmethod
+    #@lru_cache(1024)
     def gets(cls: t.Type[SQLType], refresh: bool = True, **kwargs) -> ResponseObjectList[SQLType]:
-        """Retrieves a list of objects from the database."""
+        """@brief Erstellt eine \ref ResponseObjectList aller Elemente der Tabelle. Wahlweise unter Berücksichtigung von Suchkriterien.
+
+        @param kwargs (optional) Suchkriterien im Key-Value-Format
+        @throws KeyError Falls es kein Element gibt, das den Suchkriterien entspricht.
+        """
         if not kwargs:
             return ResponseObjectList(cls.construct(cls._retrieve()))
         return ResponseObjectList(cls.construct(cls._retrieve(kwargs)))
 
     @classmethod
-    @lru_cache(128)
     def get(cls: t.Type[SQLType], primary_value=None, refresh: bool = True, **kwargs) -> SQLType:
-        """Retrieves the object from the database if it has only one element."""
+        """@brief Gibt, wenn es nur ein Element der angegebenen Suchkriterien in der Tabelle gibt, genau dieses zurück.
+
+        @param primary_value (optional) Matcht nur Einträge mit diesem Wert als Primärschlüsselwert.
+        @param kwargs (optional) Andere Suchkriterien im Key-Value-Format
+        @throws ResponseAmbiguousError Wenn es mehr als ein solches Element gibt
+        @throws KeyError Wenn es kein solches Element gibt
+        """
         if primary_value is not None:
             elements = cls.gets(refresh=refresh, **{cls.PRIMARY_KEY: primary_value}, **kwargs)
         else:
@@ -230,6 +296,7 @@ class SQLObject:
         return elements[0]
 
     def commit(self) -> None:
+        """@brief Aktualisiert die SQL-Tabelle und fügt das Objekt in sie ein bzw. verändert ein bestehendes Element mit demselben Primärschlüsselwert"""
         keys_lst = [k for k in self.SQL_KEYS if getattr(self, k) is not Ellipsis]
         keys = ""
         for k in keys_lst:
@@ -245,17 +312,17 @@ class SQLObject:
                 insert = True
 
         if insert:
-            self._db().query(f"INSERT INTO {self.TABLE_NAME} ({keys}) VALUES ({('%s, '*len(keys_lst)).strip(', ')})", self.args(keys_lst))
+            self.db().query(f"INSERT INTO {self.TABLE_NAME} ({keys}) VALUES ({('%s, '*len(keys_lst)).strip(', ')})", self.args(keys_lst))
         else:
             kw_keys = ""
             for key in keys_lst:
                 kw_keys += f"{key} = %s, "
-            self._db().query(f"UPDATE {self.TABLE_NAME} SET {kw_keys.strip(', ')} WHERE {self.PRIMARY_KEY} = %s",
+            self.db().query(f"UPDATE {self.TABLE_NAME} SET {kw_keys.strip(', ')} WHERE {self.PRIMARY_KEY} = %s",
                              self.args(keys_lst) + (self.primary_value(),))
-        self.get.cache_clear()
 
     @classmethod
     def get_next_id(cls):
+        """@brief Berechnet den höchsten in der Tabelle vertretene numerischen Primärschlüsselwert und inkrementiert diesen."""
         try:
             data = cls.gets()[-1]
         except IndexError:
@@ -268,9 +335,7 @@ class SQLObject:
 
     @classmethod
     def get_increment(cls) -> int:
-        """Checks for gaps in the sequence of primary values of objects.
-        :return: The first missing primary value in the sequence.
-        """
+        """@brief Bestimmt den ersten nicht in der Tabelle vertretenen numerischen Primärschlüssel"""
         objs = cls.gets()
 
         if len(objs) == 0:
@@ -284,6 +349,7 @@ class SQLObject:
 
     @classmethod
     def exists(cls, value_primary: any) -> bool:
+        """@brief Bestimmt, ob ein Element des angegebenen Primärschlüsselwertes existiert"""
         try:
             kwargs = {cls.PRIMARY_KEY: value_primary}
             cls.get(**kwargs)
@@ -293,10 +359,8 @@ class SQLObject:
 
     @classmethod
     def fetchs(cls: t.Type[SQLType], **kwargs) -> ResponseObjectList[SQLType]:
-        """Retrieves a list of objects from the database. Returns [] if no matches are found.
-
-        :param kwargs: Keyword Arguments
-        :returns: `ResponseObjectList`
+        """@brief Entspricht \ref gets ohne eine Exception zu werfen
+        Anstatt eine Exception zu werfen, wird eine leere Liste zurückgegeben.
         """
         try:
             return cls.gets(**kwargs)
@@ -304,13 +368,9 @@ class SQLObject:
             return ResponseObjectList([])
 
     @classmethod
-    def fetch(cls: t.Type[SQLType], primary_value=None, **kwargs) -> SQLType:
-        """Retrieves the object from the database if it has only one element.
-        Does not raise error when no matches are found
-
-        :param primary_value: (Optional) The value of the primary key
-        :param kwargs: Keyword Arguments
-        :returns: Object or `None`
+    def fetch(cls: t.Type[SQLType], primary_value=None, **kwargs) -> t.Optional[SQLType]:
+        """@brief Entspricht \ref get ohne eine Exception zu werfen
+        Anstatt eine Exception zu werfen, wird `None` zurückgegeben.
         """
         try:
             if primary_value is not None:
@@ -321,17 +381,18 @@ class SQLObject:
             return None
 
     def cache(self, key: any, func: callable) -> any:
-        """Used to retrieve value from instance environment cache and assign it to cache if it is not already there.
+        """@brief Used to retrieve value from instance environment cache and assign it to cache if it is not already there.
+        @deprecated Veraltet
 
-        :param key: Key in the environment dictionary.
-        :param func: Function that returns the wanted value
-        :return: The value from cache.
+        @param key Key in the environment dictionary.
+        @param func Function that returns the wanted value
+        @returns The value from cache.
         """
         return self._cache.cache(key, func)
 
 
 class Cache:
-    """DEPRECATED, use `SQLObject.cache` instead"""
+    """@deprecated Lange obsolet"""
     def __init__(self, stored_type, attr=None):
         self.cache = []
         self.cls = stored_type
@@ -347,15 +408,20 @@ class Cache:
 
 
 class DictCache:
+    """@brief Dictionary-artiger Typ, der als Cache fungiert
+    @deprecated Veraltet
+    """
+
     def __init__(self):
         self._cache = {}
 
     def cache(self, key: any, func: callable) -> any:
-        """Used to retrieve value from instance environment cache and assign it to cache if it is not already there.
+        """@brief Used to retrieve value from instance environment cache and assign it to cache if it is not already there.
+        @deprecated Veraltet
 
-        :param key: Key in the environment dictionary.
-        :param func: Function that returns the wanted value
-        :return: The value from cache.
+        @param key Key in the environment dictionary.
+        @param func Function that returns the wanted value
+        @returns The value from cache.
         """
         try:
             return self._cache[key]

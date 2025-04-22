@@ -5,6 +5,7 @@ import typing as t
 from typing import Union, List, Type, Callable
 from hashlib import sha1
 from functools import lru_cache
+from types import EllipsisType
 
 
 __version__ = "1.14"
@@ -12,6 +13,7 @@ __version__ = "1.14"
 
 SQLType = t.TypeVar("SQLType", bound="SQLObject")
 T = t.TypeVar("T")
+NullAllowed: t.TypeAlias = t.Union[T, EllipsisType]
 
 
 OPERATORS = {

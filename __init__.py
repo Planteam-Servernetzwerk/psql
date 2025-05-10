@@ -2,7 +2,7 @@ import dbconnect
 from datetime import datetime, date
 from . import exceptions
 import typing as t
-from typing import Union, List, Type, Callable
+from typing import Generic, Union, List, Type, Callable
 from hashlib import sha1
 from functools import lru_cache
 from types import EllipsisType
@@ -391,16 +391,19 @@ class SQLObject:
         return self._cache.cache(key, func)
 
 
-class Lookup:
+class Lookup(Generic[SQLType]):
     """@brief Creates a dictionary-like lookup of a psql table with a defined key"""
-    def __init__(self, table: SQLObject, key: Union[str, Callable] = "primary_value") -> None:
+    def __init__(self, table: Type[SQLType], key: Union[str, Callable] = lambda o: o.primary_value()) -> None:
         objs = table.gets()
         __key = key if callable(key) else lambda o: getattr(o, key)
         self.table = table
         self.lookup = {__key(obj): obj for obj in objs}
 
-    def __getitem__(self, k):
+    def __getitem__(self, k) -> SQLType:
         return self.lookup[k]
+
+    def __repr__(self) -> str:
+        return f"<psql.Lookup {self.lookup}>"
 
 
 class Cache:

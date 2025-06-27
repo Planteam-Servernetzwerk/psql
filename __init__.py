@@ -400,6 +400,8 @@ class Lookup(Generic[SQLType]):
         self.lookup = {__key(obj): obj for obj in objs}
 
     def __getitem__(self, k) -> SQLType:
+        if k is None:
+            return None
         return self.lookup[k]
 
     def __repr__(self) -> str:
